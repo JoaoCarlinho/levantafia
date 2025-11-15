@@ -77,7 +77,7 @@ coverage/
 *.lcov
 
 # Documentation (uncomment if you want to track docs)
-# docs/
+docs/
 .claude/
 bmad/
 DEPLOYMENT_CHECKLIST.md
