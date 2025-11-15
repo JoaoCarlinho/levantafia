@@ -226,17 +226,21 @@ export const UploadScreen: React.FC = () => {
 
   const clearPending = async () => {
     Alert.alert(
-      'Clear Pending Uploads',
-      'This will remove all queued and waiting uploads from the list. Are you sure?',
+      'Clear Stuck Uploads',
+      'This will remove all queued, waiting, and uploading items from the list. Are you sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Clear',
+          text: 'Clear All',
           style: 'destructive',
           onPress: async () => {
             const currentQueue = await UploadQueueStorage.getQueue();
-            const itemsToRemove = currentQueue.filter(
-              item => item.status === 'queued' || item.status === 'waiting_for_network'
+
+            // Remove items that are queued, waiting for network, or currently uploading
+            const itemsToRemove = currentQueue.filter(item =>
+              item.status === 'queued' ||
+              item.status === 'waiting_for_network' ||
+              item.status === 'uploading'
             );
 
             for (const item of itemsToRemove) {
@@ -244,7 +248,7 @@ export const UploadScreen: React.FC = () => {
             }
 
             loadQueue();
-            Alert.alert('Success', `Cleared ${itemsToRemove.length} pending upload(s)`);
+            Alert.alert('Success', `Cleared ${itemsToRemove.length} stuck upload(s)`);
           },
         },
       ]
@@ -303,7 +307,7 @@ export const UploadScreen: React.FC = () => {
   };
 
   const pendingCount = uploadQueue.filter(
-    item => item.status === 'queued' || item.status === 'uploading'
+    item => item.status === 'queued' || item.status === 'uploading' || item.status === 'waiting_for_network'
   ).length;
   const failedCount = uploadQueue.filter(item => item.status === 'failed').length;
   const completedCount = uploadQueue.filter(item => item.status === 'completed').length;
@@ -356,7 +360,7 @@ export const UploadScreen: React.FC = () => {
           <View style={styles.queueActions}>
             {pendingCount > 0 && (
               <TouchableOpacity onPress={clearPending} style={[styles.actionBtn, styles.warningBtn]}>
-                <Text style={styles.actionBtnText}>Clear Pending</Text>
+                <Text style={styles.actionBtnText}>Clear Stuck ({pendingCount})</Text>
               </TouchableOpacity>
             )}
             {failedCount > 0 && (
