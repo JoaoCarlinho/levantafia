@@ -7,7 +7,6 @@ import {
   FlatList,
   Image,
   Alert,
-  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import NetInfo from '@react-native-community/netinfo';
@@ -225,6 +224,33 @@ export const UploadScreen: React.FC = () => {
     loadQueue();
   };
 
+  const clearPending = async () => {
+    Alert.alert(
+      'Clear Pending Uploads',
+      'This will remove all queued and waiting uploads from the list. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            const currentQueue = await UploadQueueStorage.getQueue();
+            const itemsToRemove = currentQueue.filter(
+              item => item.status === 'queued' || item.status === 'waiting_for_network'
+            );
+
+            for (const item of itemsToRemove) {
+              await UploadQueueStorage.removeFromQueue(item.queueId);
+            }
+
+            loadQueue();
+            Alert.alert('Success', `Cleared ${itemsToRemove.length} pending upload(s)`);
+          },
+        },
+      ]
+    );
+  };
+
   const renderUploadItem = ({ item }: { item: UploadQueueItem }) => {
     const getStatusColor = () => {
       switch (item.status) {
@@ -328,6 +354,11 @@ export const UploadScreen: React.FC = () => {
       {uploadQueue.length > 0 && (
         <>
           <View style={styles.queueActions}>
+            {pendingCount > 0 && (
+              <TouchableOpacity onPress={clearPending} style={[styles.actionBtn, styles.warningBtn]}>
+                <Text style={styles.actionBtnText}>Clear Pending</Text>
+              </TouchableOpacity>
+            )}
             {failedCount > 0 && (
               <TouchableOpacity onPress={retryFailed} style={styles.actionBtn}>
                 <Text style={styles.actionBtnText}>Retry Failed</Text>
@@ -437,6 +468,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  warningBtn: {
+    backgroundColor: '#ea580c',
   },
   actionBtnText: {
     color: '#ffffff',
