@@ -9,8 +9,10 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Modal,
+  StatusBar,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { apiClient } from '../services/api';
 import { PhotosCacheStorage } from '../services/storage';
 import type { Photo } from '../types';
@@ -26,6 +28,7 @@ export const GalleryScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+  const [enlargedPhoto, setEnlargedPhoto] = useState<Photo | null>(null);
   const isFocused = useIsFocused();
 
   // Load photos on initial mount
@@ -173,6 +176,8 @@ export const GalleryScreen: React.FC = () => {
         onPress={() => {
           if (selectionMode) {
             toggleSelection(item.id);
+          } else {
+            setEnlargedPhoto(item);
           }
         }}
         onLongPress={() => handleLongPress(item.id)}
@@ -272,6 +277,37 @@ export const GalleryScreen: React.FC = () => {
           />
         }
       />
+
+      <Modal
+        visible={enlargedPhoto !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEnlargedPhoto(null)}
+      >
+        <StatusBar hidden />
+        <TouchableOpacity
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPress={() => setEnlargedPhoto(null)}
+        >
+          {enlargedPhoto && (
+            <View style={styles.modalContent}>
+              <Image
+                source={{ uri: enlargedPhoto.url }}
+                style={styles.enlargedImage}
+                resizeMode="contain"
+              />
+              <View style={styles.modalInfo}>
+                <Text style={styles.modalFilename}>{enlargedPhoto.filename}</Text>
+                <Text style={styles.modalMeta}>
+                  {(enlargedPhoto.sizeBytes / 1024 / 1024).toFixed(2)} MB
+                  {enlargedPhoto.width > 0 && ` • ${enlargedPhoto.width}×${enlargedPhoto.height}`}
+                </Text>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -404,5 +440,43 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#ffffff',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.98)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  enlargedImage: {
+    width: '100%',
+    height: '85%',
+  },
+  modalInfo: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalFilename: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalMeta: {
+    color: '#888888',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

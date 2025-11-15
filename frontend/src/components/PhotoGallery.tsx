@@ -26,6 +26,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ uploadedPhotos }) =>
   const [loading, setLoading] = useState(true);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [enlargedPhoto, setEnlargedPhoto] = useState<Photo | null>(null);
 
   useEffect(() => {
     fetchPhotos();
@@ -221,7 +222,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ uploadedPhotos }) =>
                 className="photo-checkbox"
               />
             </div>
-            <div className="photo-image-container">
+            <div className="photo-image-container" onClick={() => setEnlargedPhoto(photo)}>
               <img
                 src={photo.url}
                 alt={photo.filename}
@@ -256,6 +257,27 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ uploadedPhotos }) =>
           </div>
         ))}
       </div>
+
+      {enlargedPhoto && (
+        <div className="photo-modal" onClick={() => setEnlargedPhoto(null)}>
+          <div className="photo-modal-content">
+            <img
+              src={enlargedPhoto.url}
+              alt={enlargedPhoto.filename}
+              className="photo-modal-image"
+            />
+            <div className="photo-modal-info">
+              <p className="photo-modal-filename">{enlargedPhoto.filename}</p>
+              <p className="photo-modal-meta">
+                {(enlargedPhoto.sizeBytes / 1024 / 1024).toFixed(2)} MB
+                {enlargedPhoto.width > 0 && enlargedPhoto.height > 0 && (
+                  <span> • {enlargedPhoto.width} × {enlargedPhoto.height}</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
