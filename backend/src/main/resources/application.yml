@@ -1,0 +1,130 @@
+spring:
+  application:
+    name: levantafia-backend
+
+  # CRITICAL: Enable Virtual Threads (Java 21+)
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:levantafia}?sslmode=require
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      # Optimized for Virtual Threads - can handle many more connections
+      maximum-pool-size: 100
+      minimum-idle: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # Changed from 'validate' to 'update' for initial development
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+
+  servlet:
+    multipart:
+      # Disable multipart for our use case - we use presigned URLs
+      enabled: false
+
+# AWS Configuration
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket-name: ${S3_BUCKET_NAME:levantafia-dev-photos}
+    # CloudFront distribution for CDN
+    cloudfront-domain: ${CLOUDFRONT_DOMAIN:}
+    # Multipart upload configuration
+    multipart:
+      # Files larger than 10MB use multipart upload
+      threshold-bytes: 10485760  # 10 MB
+      # Each part is 5MB (minimum allowed by S3)
+      part-size-bytes: 5242880   # 5 MB
+      # Upload parts in parallel
+      max-concurrent-parts: 10
+    # Presigned URL expiration
+    presigned-url-expiry-minutes: 15
+    # Transfer acceleration (optional - costs more but faster)
+    transfer-acceleration-enabled: ${S3_TRANSFER_ACCELERATION:false}
+
+# Upload Performance Configuration
+upload:
+  # Maximum concurrent uploads the server will process
+  max-concurrent-uploads: 100
+  # Queue capacity for pending uploads
+  queue-capacity: 500
+  # Virtual thread pool configuration (uses Virtual Threads)
+  virtual-thread-executor:
+    name-prefix: "upload-vthread-"
+  # Timeout for upload operations
+  timeout-seconds: 120
+  # Maximum file size (50MB)
+  max-file-size-bytes: 52428800
+  # Allowed content types
+  allowed-content-types:
+    - image/jpeg
+    - image/png
+    - image/webp
+    - image/heic
+    - image/heif
+
+# WebSocket Configuration
+websocket:
+  endpoint: /ws
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  # Message broker for STOMP
+  message-broker:
+    application-prefix: /app
+    topic-prefix: /topic
+    user-prefix: /user
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:dev}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.levantafia: DEBUG
+    software.amazon.awssdk: WARN
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# CORS Configuration
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600
+
+# Security (JWT)
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-this-in-production-to-a-secure-random-string}
+    expiration-ms: 86400000  # 24 hours
+    refresh-expiration-ms: 604800000  # 7 days
