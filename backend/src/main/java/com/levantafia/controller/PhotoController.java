@@ -7,6 +7,7 @@ import com.levantafia.repository.PhotoUploadRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import java.time.Instant;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -134,6 +135,42 @@ public class PhotoController {
         return ResponseEntity.ok(Map.of(
                 "deletedCount", orphanedPhotos.size(),
                 "remainingCount", allPhotos.size() - orphanedPhotos.size()
+        ));
+    }
+
+    /**
+     * Cleanup stuck upload jobs (INITIATED or UPLOADING for > 1 hour)
+     * This endpoint deletes PhotoUpload records that are stuck in pending states
+     *
+     * @return Count of deleted upload jobs
+     */
+    @DeleteMapping("/cleanup-stuck-uploads")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> cleanupStuckUploads() {
+        log.info("Starting cleanup of stuck upload jobs");
+
+        // Find uploads stuck in INITIATED or UPLOADING for more than 1 hour
+        Instant oneHourAgo = Instant.now().minusSeconds(3600);
+
+        List<PhotoUpload> stuckUploads = photoUploadRepository.findAll().stream()
+                .filter(upload -> {
+                    boolean isStuckStatus = upload.getStatus() == PhotoUpload.PhotoUploadStatus.INITIATED
+                            || upload.getStatus() == PhotoUpload.PhotoUploadStatus.UPLOADING;
+                    boolean isOld = upload.getCreatedAt().isBefore(oneHourAgo);
+                    return isStuckStatus && isOld;
+                })
+                .toList();
+
+        log.info("Found {} stuck uploads to delete", stuckUploads.size());
+
+        // Delete stuck uploads
+        photoUploadRepository.deleteAll(stuckUploads);
+
+        log.info("Deleted {} stuck upload jobs", stuckUploads.size());
+
+        return ResponseEntity.ok(Map.of(
+                "deletedCount", stuckUploads.size(),
+                "message", String.format("Deleted %d stuck upload jobs", stuckUploads.size())
         ));
     }
 

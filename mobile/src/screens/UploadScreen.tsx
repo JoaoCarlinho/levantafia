@@ -72,7 +72,7 @@ export const UploadScreen: React.FC = () => {
             mediaTypes: ['images'],
             quality: 0.8,
             allowsMultipleSelection: true,
-            selectionLimit: 20,
+            selectionLimit: 100,
           });
 
       if (!result.canceled && result.assets) {

@@ -70,6 +70,24 @@
   opacity: 0.5;
 }
 
+.cleanup-button {
+  background: #ea580c;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cleanup-button:hover {
+  background: #c2410c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
 .photo-gallery-loading,
 .photo-gallery-empty {
   text-align: center;

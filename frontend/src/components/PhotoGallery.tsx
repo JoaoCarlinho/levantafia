@@ -88,6 +88,32 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ uploadedPhotos }) =>
     }
   };
 
+  const cleanupStuckUploads = async () => {
+    const confirmCleanup = window.confirm(
+      'This will delete upload jobs stuck in pending state for more than 1 hour. Continue?'
+    );
+
+    if (!confirmCleanup) return;
+
+    try {
+      const response = await fetch('/api/v1/photos/cleanup-stuck-uploads', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`${result.deletedCount} stuck upload jobs deleted.`);
+        fetchPhotos(); // Refresh gallery
+      } else {
+        console.error('Failed to cleanup stuck uploads');
+        alert('Failed to cleanup stuck uploads. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cleaning up stuck uploads:', error);
+      alert('Error cleaning up stuck uploads. Please try again.');
+    }
+  };
+
   const deleteSelectedPhotos = async () => {
     if (selectedPhotoIds.size === 0) return;
 
@@ -157,6 +183,12 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ uploadedPhotos }) =>
         </div>
         {photos.length > 0 && (
           <div className="photo-actions">
+            <button
+              className="cleanup-button"
+              onClick={cleanupStuckUploads}
+            >
+              Clean Up Stuck Uploads
+            </button>
             <label className="select-all-checkbox">
               <input
                 type="checkbox"

@@ -59,7 +59,7 @@ class ApiClient {
   }
 
   /**
-   * Upload a photo
+   * Upload a photo using the multipart upload workflow
    */
   async uploadPhoto(
     fileUri: string,
@@ -68,38 +68,109 @@ class ApiClient {
     onProgress?: (progress: number) => void
   ): Promise<UploadResponse> {
     try {
-      const formData = new FormData();
+      // Get file size first
+      const fileInfo = await fetch(fileUri);
+      const blob = await fileInfo.blob();
+      const fileSizeBytes = blob.size;
 
-      // Create file object for upload
-      const file = {
-        uri: fileUri,
-        type: mimeType,
-        name: filename,
-      } as any;
+      // Step 1: Initialize upload to get presigned URLs
+      const initResponse = await this.client.post(API_ENDPOINTS.UPLOAD_INIT, {
+        filename,
+        fileSizeBytes,
+        contentType: mimeType,
+      });
 
-      formData.append('file', file);
+      const {
+        uploadId,
+        s3Key,
+        multipartUploadId,
+        presignedUrls,
+        multipart,
+      } = initResponse.data;
 
-      const response = await this.client.post<UploadResponse>(
-        API_ENDPOINTS.UPLOAD,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            if (onProgress && progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              onProgress(percentCompleted);
-            }
-          },
+      if (onProgress) onProgress(10);
+
+      // Step 2: Upload directly to S3 using presigned URLs
+      const partETags: string[] = [];
+
+      if (multipart && presignedUrls && presignedUrls.length > 0) {
+        // Multipart upload
+        const chunkSize = Math.ceil(fileSizeBytes / presignedUrls.length);
+
+        for (let i = 0; i < presignedUrls.length; i++) {
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, fileSizeBytes);
+          const chunk = blob.slice(start, end);
+
+          const uploadResponse = await fetch(presignedUrls[i], {
+            method: 'PUT',
+            body: chunk,
+            headers: {
+              'Content-Type': mimeType,
+            },
+          });
+
+          const etag = uploadResponse.headers.get('ETag')?.replace(/"/g, '') || '';
+          partETags.push(etag);
+
+          if (onProgress) {
+            const progress = 10 + Math.round((i + 1) / presignedUrls.length * 80);
+            onProgress(progress);
+          }
         }
-      );
+      } else if (presignedUrls && presignedUrls.length === 1) {
+        // Single-part upload
+        const uploadResponse = await fetch(presignedUrls[0], {
+          method: 'PUT',
+          body: blob,
+          headers: {
+            'Content-Type': mimeType,
+          },
+        });
 
-      return response.data;
+        const etag = uploadResponse.headers.get('ETag')?.replace(/"/g, '') || '';
+        partETags.push(etag);
+
+        if (onProgress) onProgress(90);
+      }
+
+      // Step 3: Complete the upload
+      const completeResponse = await this.client.post(API_ENDPOINTS.UPLOAD_COMPLETE, {
+        uploadId,
+        s3Key,
+        filename,
+        fileSizeBytes,
+        contentType: mimeType,
+        multipartUploadId: multipart ? multipartUploadId : null,
+        partETags,
+      });
+
+      if (onProgress) onProgress(100);
+
+      return {
+        photo: {
+          id: completeResponse.data.photoId,
+          url: completeResponse.data.cdnUrl,
+          thumbnailUrl: completeResponse.data.cdnUrl,
+          filename: completeResponse.data.filename,
+          uploadedAt: new Date().toISOString(),
+        },
+      };
     } catch (error) {
       console.error('Failed to upload photo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up stuck upload jobs (INITIATED or UPLOADING for > 1 hour)
+   */
+  async cleanupStuckUploads(): Promise<{ deletedCount: number; message: string }> {
+    try {
+      const response = await this.client.delete(API_ENDPOINTS.CLEANUP_STUCK_UPLOADS);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to cleanup stuck uploads:', error);
       throw error;
     }
   }

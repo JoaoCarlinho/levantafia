@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { apiClient } from '../services/api';
 import { PhotosCacheStorage } from '../services/storage';
 import type { Photo } from '../types';
@@ -25,10 +26,19 @@ export const GalleryScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+  const isFocused = useIsFocused();
 
+  // Load photos on initial mount
   useEffect(() => {
     loadPhotos();
   }, []);
+
+  // Reload photos when screen comes into focus (e.g., after uploading)
+  useEffect(() => {
+    if (isFocused) {
+      loadPhotos(false); // Skip cache to get fresh data
+    }
+  }, [isFocused]);
 
   const loadPhotos = async (useCache = true) => {
     try {
@@ -87,6 +97,33 @@ export const GalleryScreen: React.FC = () => {
   const deselectAll = () => {
     setSelectedIds(new Set());
     setSelectionMode(false);
+  };
+
+  const cleanupStuckUploads = async () => {
+    Alert.alert(
+      'Clean Up Stuck Uploads',
+      'This will delete upload jobs stuck in pending state for more than 1 hour. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clean Up',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await apiClient.cleanupStuckUploads();
+              Alert.alert(
+                'Success',
+                `${result.deletedCount} stuck upload jobs deleted.`
+              );
+              loadPhotos(false); // Refresh gallery
+            } catch (error) {
+              console.error('Failed to cleanup stuck uploads:', error);
+              Alert.alert('Error', 'Failed to cleanup stuck uploads.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const deleteSelected = async () => {
@@ -185,6 +222,17 @@ export const GalleryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {!selectionMode && (
+        <View style={styles.toolbarHeader}>
+          <TouchableOpacity
+            onPress={cleanupStuckUploads}
+            style={styles.cleanupButton}
+          >
+            <Text style={styles.cleanupButtonText}>Clean Up Stuck Uploads</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {selectionMode && (
         <View style={styles.selectionHeader}>
           <Text style={styles.selectionCount}>
@@ -239,6 +287,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  toolbarHeader: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    backgroundColor: '#1f1f1f',
+  },
+  cleanupButton: {
+    backgroundColor: '#ea580c',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cleanupButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   list: {
     padding: SPACING,

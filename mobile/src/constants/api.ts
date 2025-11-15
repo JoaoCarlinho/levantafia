@@ -18,8 +18,11 @@ export const API_BASE_URL = getApiBaseUrl();
  */
 export const API_ENDPOINTS = {
   PHOTOS: '/api/v1/photos',
-  UPLOAD: '/api/v1/upload',
+  UPLOAD_INIT: '/api/v1/uploads/init',
+  UPLOAD_COMPLETE: '/api/v1/uploads/complete',
   DELETE_PHOTOS: '/api/v1/photos',
+  CLEANUP_STUCK_UPLOADS: '/api/v1/photos/cleanup-stuck-uploads',
+  CLEANUP_ORPHANED: '/api/v1/photos/cleanup-orphaned',
 } as const;
 
 /**

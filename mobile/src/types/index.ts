@@ -58,9 +58,13 @@ export interface DeletePhotosResponse {
 }
 
 export interface UploadResponse {
-  uploadId: string;
-  photo: Photo;
-  cdnUrl: string;
+  photo: {
+    id: string;
+    url: string;
+    thumbnailUrl?: string;
+    filename: string;
+    uploadedAt: string;
+  };
 }
 
 /**
