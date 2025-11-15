@@ -1,1 +1,90 @@
-docs/
+# IDE and Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+!.env.template
+tokens.sh
+
+# AWS credentials
+.aws/
+aws-credentials
+
+# Backend (Spring Boot / Maven)
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+backend/**/*.class
+backend/**/*.jar
+backend/**/*.war
+backend/**/*.ear
+backend/**/*.log
+
+# Frontend (React / Node)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.cache/
+frontend/*.log
+
+# Terraform
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfvars
+terraform/**/.terraform.lock.hcl
+!terraform/**/.terraform.lock.hcl.example
+terraform/**/crash.log
+terraform/**/.terraformrc
+terraform/**/terraform.rc
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+*.zip
+*.tar.gz
+
+# Coverage
+coverage/
+*.lcov
+
+# Documentation (uncomment if you want to track docs)
+# docs/
+.claude/
+bmad/
+DEPLOYMENT_CHECKLIST.md
+DEPLOYMENT_STATUS.md
+ECS_DEPLOYMENT_GUIDE.md
+GETTING_STARTED.md
+IMPLEMENTATION_PLAN.md
+IMPLEMENTATION_SUMMARY.md
+RDS_ACCESS_GUIDE.md
+SESSION_MANAGER_SETUP_COMPLETE.md
